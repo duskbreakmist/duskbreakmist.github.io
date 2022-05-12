@@ -1,0 +1,34 @@
+li.list{
+    color: blueviolet;
+}
+li li:nth-child(0){
+    background-color: red;
+}
+.bigBox{
+    border: 5px solid black;
+    width: 500px;
+    height: 500px;
+    background-color: aqua;
+}
+.middleBox{
+    border: 1px solid black;
+    width: 150px;
+    height: 150px;
+    /* box-sizing: border-box; */
+    margin: 0;
+    float: left;
+}
+.smallBox:hover{
+    background-color: blueviolet;
+}
+
+.smallBox{
+    border: 1px solid blue;
+    box-sizing: border-box;
+    background-color: red;
+    width: 50px;
+    height: 50px;
+    
+    float: left;
+    
+}
