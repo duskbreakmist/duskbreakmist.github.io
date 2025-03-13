@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单个 img 标签调整图片顺序</title>
+    <style>
+        .container {
+            position: relative;
+            overflow: hidden;
+            width: 100%; /* 根据需要调整容器宽度 */
+        }
+
+        canvas {
+            display: block;
+            width: auto; /* 根据需要调整 canvas 宽度 */
+            height: 100%; /* 高度自适应 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        // 获取 canvas 元素
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // 创建图片对象
+        const img = new Image();
+        img.src = "00024.webp";
+
+        // 等待图片加载完成
+        img.onload = function () {
+            // 设置 canvas 的宽度和高度与图片一致
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            // 将图片分割成4块并上下反转
+            // const slices1 = 3;
+            // const slices2 = 3;
+            // slices_all = slices1*slices2;
+            const slices = 12;
+            const sliceHeight = (img.height-2) / slices;
+
+            // 反转顺序
+            for (let i = 0; i < slices; i++) {
+                // 计算每一块的起始位置
+                const sourceY = (slices - 1 - i) * sliceHeight;
+                const destY = i * sliceHeight;
+
+                // 绘制每一块
+                ctx.drawImage(
+                    img, 
+                    0, sourceY, img.width, sliceHeight, // 源图像的裁剪区域
+                    0, destY, img.width, sliceHeight  // 目标 canvas 的绘制区域
+                );
+            }
+        };
+    </script>
+</body>
+</html>

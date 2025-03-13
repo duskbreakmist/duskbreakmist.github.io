@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单个 img 标签调整图片顺序</title>
+    <style>
+        .container {
+            position: relative;
+            overflow: hidden;
+            width: 100%; /* 根据需要调整容器宽度 */
+        }
+
+        .image {
+            width: auto; /* 图片宽度自适应 */
+            height: 100%; /* 图片高度自适应 */
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="00024.webp" alt="Image" class="image" id="image">
+    </div>
+
+    <script>
+        // 获取图片元素
+        const image = document.getElementById("image");
+
+        // 等待图片加载完成
+        image.onload = function () {
+            adjustImageOrder(image);
+        };
+
+        // 调整图片的显示顺序
+        function adjustImageOrder(img) {
+            const totalHeight = img.height; // 图片的实际高度
+            const slices = 4; // 将图片切割为4份
+            const sliceHeight = totalHeight / slices; // 每份的高度
+
+            // 定义目标顺序（1234）
+            const targetOrder = [0, 1, 2, 3];
+
+            // 使用 clip-path 动态调整每份的显示
+            let clipPaths = [];
+            for (let i = 0; i < slices; i++) {
+                const startY = targetOrder[i] * sliceHeight; // 计算每份的起始位置
+                clipPaths.push(`inset(${startY}px 0 ${totalHeight - startY - sliceHeight}px 0)`);
+            }
+
+            // 应用 clip-path
+            img.style.clipPath = clipPaths.join(", ");
+        }
+    </script>
+</body>
+</html>

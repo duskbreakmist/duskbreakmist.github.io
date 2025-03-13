@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body,
+      
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <input type="checkbox" id="options_open" />
+    <label for="options_open"> </label>
+    <div class="options">
+      <label>Iterations (<span id="it-report">...</span>)</label>
+      <div>
+        <input
+          type="range"
+          min="4"
+          max="2048"
+          step="1"
+          value="256"
+          id="rangeslider"
+        />
+      </div>
+    </div>
+ 
+    <script id="2d-vertex-shader" type="x-shader/x-vertex">
+      attribute vec2 a_position;
+ 
+      void main() {
+       gl_Position = vec4(a_position, 0, 1);
+      }
+    </script>
+ 
+    <script id="2d-fragment-shader" type="x-shader/x-fragment">
+      precision highp float;
+      #define ITERATIONS [[ITERATIONS]]
+ 
+      uniform vec2 center;
+      uniform float user_scale;
+      uniform float canvas_resolution;
+      uniform int steps;
+ 
+      vec2 cmul(vec2 a, vec2 b) {
+       return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+      }
+ 
+      float magnitude(vec2 v) {
+       return sqrt(v.x * v.x + v.y * v.y);
+      }
+ 
+      vec3 val_at(vec2 pos) {
+       vec2 z = vec2(0., 0.);
+       for (int i = 0; i < ITERATIONS; i++) {
+         z = cmul(z, z) + pos;
+         if (magnitude(z) > 4.) {
+           return vec3(sqrt(float(i + 1) - log(log(magnitude(z))) / log(2.)));
+         }
+       }
+       return vec3(z, z.x + z.y) * 5.;
+      }
+ 
+      void main() {
+       vec3 calculated = val_at((gl_FragCoord.xy / canvas_resolution - 0.5) * user_scale + center);
+       gl_FragColor = vec4(sin(calculated * 0.5 + float(steps) * 0.01) / 2. + 0.5, 1.0);
+      }
+    </script>
+ 
+    <script>
+      var GLUtils = {
+        // GL -> ProgramType -> DOM ID -> Shader
+        compileShader: function (gl, programType, domId, templateVars) {
+          var shaderScript = document.getElementById(domId),
+            shaderSource = shaderScript.text,
+            shader = gl.createShader(programType);
+          for (var v in templateVars) {
+            console.log("[[" + v + "]]", templateVars[v]);
+            shaderSource = shaderSource.replace(
+              "[[" + v + "]]",
+              templateVars[v]
+            );
+          }
+          gl.shaderSource(shader, shaderSource);
+          gl.compileShader(shader);
+          var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+          if (!success) {
+            throw "could not compile shader:" + gl.getShaderInfoLog(shader);
+          }
+          return shader;
+        },
+        // GL -> Shader -> Shader -> Program
+        makeProgram: function (gl, vertexShader, fragmentShader) {
+          var program = gl.createProgram();
+          gl.attachShader(program, vertexShader);
+          gl.attachShader(program, fragmentShader);
+          return program;
+        },
+        // GL -> Program -> Void
+        linkProgram: function (gl, program) {
+          gl.linkProgram(program);
+          var success = gl.getProgramParameter(program, gl.LINK_STATUS);
+          if (!success) {
+            throw "program failed to link:" + gl.getProgramInfoLog(program);
+          }
+          gl.useProgram(program);
+        },
+      };
+ 
+      function Fracs() {}
+ 
+      Fracs.prototype = {
+        recompile(options) {
+          document.getElementById("it-report").innerHTML = options.iterations;
+          this.fragS = GLUtils.compileShader(
+            this.gl,
+            this.gl.FRAGMENT_SHADER,
+            "2d-fragment-shader",
+            {
+              ITERATIONS: options.iterations,
+            }
+          );
+          this.vertS = GLUtils.compileShader(
+            this.gl,
+            this.gl.VERTEX_SHADER,
+            "2d-vertex-shader"
+          );
+ 
+          this.program = GLUtils.makeProgram(this.gl, this.vertS, this.fragS);
+          GLUtils.linkProgram(this.gl, this.program);
+          var positionLocation = this.gl.getAttribLocation(
+            this.program,
+            "a_position"
+          );
+          this.gl.enableVertexAttribArray(positionLocation);
+          this.gl.vertexAttribPointer(
+            positionLocation,
+            2,
+            this.gl.FLOAT,
+            false,
+            0,
+            0
+          );
+ 
+          this.u_steps_loc = this.gl.getUniformLocation(this.program, "steps");
+          this.u_center_loc = this.gl.getUniformLocation(
+            this.program,
+            "center"
+          );
+          this.u_scale_loc = this.gl.getUniformLocation(
+            this.program,
+            "user_scale"
+          );
+          this.u_resolution_loc = this.gl.getUniformLocation(
+            this.program,
+            "canvas_resolution"
+          );
+ 
+          this.gl.uniform1f(this.u_resolution_loc, this.RESOLUTION);
+          this.gl.uniform1i(this.u_steps_loc, 0);
+ 
+          this.gl.uniform1f(this.u_scale_loc, this.scale);
+        },
+ 
+        init: function (options) {
+          var options = options || {};
+          this.canvas = document.getElementById(options.canvasId || "c");
+          this.RESOLUTION = options.resolution || 2048;
+          this.canvas.width = this.RESOLUTION;
+          this.canvas.height = this.RESOLUTION;
+          this.steps = 0;
+          this.center = new Float32Array(
+            options.center || [-0.1617813722206478, -1.0368353669490136]
+          );
+          this.gl = this.canvas.getContext("experimental-webgl");
+          this.buffer = this.gl.createBuffer();
+ 
+          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buffer);
+          this.gl.bufferData(
+            this.gl.ARRAY_BUFFER,
+            new Float32Array([
+              -1.0,
+              -1.0,
+              1.0,
+              -1.0,
+              -1.0,
+              1.0,
+              -1.0,
+              1.0,
+              1.0,
+              -1.0,
+              1.0,
+              1.0,
+            ]),
+            this.gl.STATIC_DRAW
+          );
+ 
+          this.recompile({
+            iterations: 64,
+          });
+ 
+          this.scale = 10;
+          this.current_scale = this.scale;
+          this.direction = -1;
+          this.target_center = this.center;
+ 
+          this.render();
+ 
+          this.canvas.addEventListener(
+            "click",
+            function (e) {
+              e.preventDefault();
+              var r = this.canvas.getBoundingClientRect(),
+                px = e.offsetX / r.width,
+                py = e.offsetY / r.height,
+                dx = (px - 0.5) * this.current_scale,
+                dy = (0.5 - py) * this.current_scale,
+                nc = [this.center[0] + dx, this.center[1] + dy];
+              this.target_center = nc;
+            }.bind(this)
+          );
+ 
+          document.getElementById("rangeslider").addEventListener(
+            "change",
+            function (e) {
+              this.recompile({
+                iterations: e.target.value,
+              });
+            }.bind(this)
+          );
+        },
+ 
+        render: function () {
+          window.requestAnimationFrame(this.render.bind(this));
+          var dcx = this.target_center[0] - this.center[0],
+            dcy = this.target_center[1] - this.center[1];
+ 
+          this.current_scale += this.current_scale * 0.005 * this.direction;
+          if (this.current_scale < 0.00001 || this.current_scale > 10) {
+            this.direction *= -1;
+          }
+          this.steps += 1;
+ 
+          if (Math.abs(dcx) > dcx / 10 || Math.abs(dcy) > dcy / 10) {
+            this.center = new Float32Array([
+              this.center[0] + dcx / 10,
+              this.center[1] + dcy / 10,
+            ]);
+          }
+ 
+          this.gl.uniform2fv(this.u_center_loc, this.center);
+          this.gl.uniform1f(this.u_scale_loc, this.current_scale);
+          this.gl.uniform1i(this.u_steps_loc, this.steps);
+ 
+          this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        },
+      };
+ 
+      new Fracs().init({
+        resolution: 768,
+        center: [0.2510190964592524, -0.00001057574347854329],
+      });
+    </script>
+  </body>
+</html>

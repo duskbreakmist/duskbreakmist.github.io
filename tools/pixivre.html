@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>pixivre便捷使用</title>
+    <style>
+        ul,li{ margin:0; padding:0; list-style:none; }
+        .tool {
+            top: 0px;
+        }
+        .button {
+            width: 80px;
+            height: 30px;
+        }
+    </style>
+</head>
+<script>
+    var root = "https://pixiv.re/";
+    var pidnum = 94162089;
+    var indexnum = 1;
+    var maxindex = 2;
+    var fullurl = root+pidnum+".jpg";
+    title = "2";
+    px = 100;
+    py = 100;
+    function myFunction() {
+        document.getElementById("info").innerHTML = "加载中";
+        if (indexnum == 1) {
+            fullurl = root + pidnum + ".jpg";
+        }
+        else {
+            fullurl = root + pidnum + "-" + indexnum + ".jpg";
+        }
+        document.getElementById("mainshow").src = fullurl;
+        document.getElementById("pid").value = pidnum;
+        document.getElementById("index").value = indexnum;
+    }
+    function changepid() {
+        pidnum = document.getElementById("pid").value;
+        indexnum = 1;
+    }
+    function btbefore() {
+        var temp = Number(indexnum) - 1;
+        if (temp <= maxindex && temp > 0) {
+            indexnum = temp;
+            document.getElementById("index").value = indexnum;
+        }
+        myFunction();
+    }
+    function btnext() {
+        var temp = Number(indexnum) + 1;
+        if (temp <= maxindex && temp > 0) {
+            indexnum = temp;
+            document.getElementById("index").value = indexnum;
+        }
+        myFunction();
+    }
+    function pidbefore() {
+        var temp = Number(pidnum) - 1;
+        if (1) {
+            indexnum = 1;
+            pidnum = temp;
+            maxindex = 100;
+            document.getElementById("pid").value = pidnum;
+        }
+        myFunction();
+    }
+    function pidnext() {
+        var temp = Number(pidnum) + 1;
+        if (1) {
+            indexnum = 1;
+            pidnum = temp;
+            maxindex = 100;
+            document.getElementById("pid").value = pidnum;
+        }
+        myFunction();
+    }
+    function changeindex() {
+        var temp = document.getElementById("index").value;
+        if (temp > 0) {
+            indexnum = temp;
+        }
+        else {
+            document.getElementById("index").value = indexnum;
+        }
+    }
+    function piconerror() {
+        document.getElementById("info").innerHTML = "error";
+        maxindex = indexnum - 1;
+        document.getElementById("sum").innerHTML = maxindex;
+    }
+    function piconload() {
+        searchData();
+        document.getElementById("info").innerHTML = "加载完成";
+        document.getElementById("sum").innerHTML = maxindex;
+    }
+    function piconwait() {
+        document.getElementById("info").innerHTML = "被中断";
+        document.getElementById("sum").innerHTML = maxindex;
+    }
+    function searchData() {
+        var name = document.getElementById("pid").value;
+        if (name != '') {
+            setHistoryItems(name); 
+            rewrite();
+        }
+    }
+    window.onload = function () {
+        var ul = document.getElementById("ul1");
+        ul.onclick = function (evs) {
+            var ev = window.event || evs;
+            var tar = ev.target || ev.srcElement;
+            if (tar.innerHTML == '跳转') {
+                var span = tar.parentNode.firstElementChild || tar.parentNode.firstChild;
+                var temp = Number(span.innerHTML);
+                if (temp!=pidnum) {
+                    indexnum = 1;
+                    pidnum = temp;
+                    maxindex = 100;
+                    document.getElementById("pid").value = pidnum;
+                    myFunction();
+                }
+            }
+            else if (tar.innerHTML == '删除') {
+                var span = tar.parentNode.firstElementChild || tar.parentNode.firstChild;
+                deleteItems(span.innerHTML);
+                tar.parentNode.remove();
+            }
+        }
+    }
+    function deleteItems(keyword){
+        let { historyItems } = localStorage;
+        let lista = new Array();
+        lista = historyItems.split('|');
+        historyItems = lista.filter(e => e != keyword).join('|');
+        localStorage.historyItems = historyItems;
+    }
+    function setHistoryItems(keyword) {
+        let { historyItems } = localStorage;
+        if (historyItems === undefined) {
+            localStorage.historyItems = keyword;
+        } else {
+              let lista = new Array()
+              lista = historyItems.split('|')
+              distinct(lista)
+              if(lista.length>10){
+                  lista.splice(9)
+              }
+              historyItems = keyword + '|' + lista.filter(e => e != keyword).join('|');
+                localStorage.historyItems = historyItems;
+        }
+        list1 = localStorage.historyItems.split('|')
+        distinct(list1)
+     };
+    function distinct(list) {
+        return Array.from(new Set(list))
+    }
+    function rewrite(){
+      var str=localStorage.historyItems;
+      var s = '';
+      if(str==undefined){
+          s='<div class="align-center">暂无搜索记录...</div>';
+          $("#lssslb").append(s);
+      }else{
+          list1=str.split("|");
+           let html_i = ''
+           if(list1.length>0){
+              for (let index = 0; index < list1.length; index++) {
+                html_i += '<li ><span>'+list1[index]+'</span><button class="button">跳转</button> <button class="button">删除</button></li>';
+              }
+              document.getElementById("ul1").innerHTML=html_i;
+          }
+       }
+  }
+</script>
+<body>
+    <div style="width:220px; height: 500px;">
+        <img id="mainshow" style="width: auto;height: 500px;" onerror="piconerror()" onload="piconload()"
+            onabort="piconwait()" src="https://pixiv.re/94162089.jpg">
+    </div>
+    <div class="tool">
+        <div>
+            <button class="button" onclick="btbefore()">上一张</button>
+            <button class="button" onclick="btnext()">下一张</button>
+            当前为第
+            <input style="width:40px; height:20px;" type="number" id="index" oninput="changeindex()" value="1">
+            张, 总共<label id="sum">2</label> 张。
+        </div>
+        说明：如果图片加载不出来，可能是api速度过快导致被封。请稍后在使用。
+        <div>
+            <button class="button" onclick="pidbefore()">上一组</button>
+            <button class="button" onclick="pidnext()">下一组</button>
+            状态：
+            <label id="info"> 等待</label>
+        </div>
+        <div>
+            <button class="button" onclick="maxindex=100; myFunction(); ">更新</button>
+            <input style="width:100px; height:20px;" type="number" id="pid" oninput="changepid()" value="94162089">输入图片pid
+            <button class="button" onclick="getinfo()">显示信息</button>
+        </div>
+        <div>
+            <div style="color:#777777">历史</div>
+            <ul id="ul1" ></ul>
+        </div>
+    </div>
+</body>
+<footer>by msnk </footer>
+</html>
